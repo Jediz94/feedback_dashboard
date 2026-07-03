@@ -1,0 +1,1615 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Feedback Dashboard</title>
+<style>
+  /* ─── Reset & Base ─── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:        #F9FAFB;
+    --surface:   #FFFFFF;
+    --border:    #E5E7EB;
+    --text:      #111827;
+    --muted:     #6B7280;
+    --light:     #F3F4F6;
+    --blue:      #3B82F6;
+    --blue-bg:   #EFF6FF;
+    --green:     #10B981;
+    --green-bg:  #ECFDF5;
+    --red:       #EF4444;
+    --red-bg:    #FEF2F2;
+    --yellow:    #F59E0B;
+    --yellow-bg: #FFFBEB;
+    --purple:    #8B5CF6;
+    --purple-bg: #F5F3FF;
+    --r:         8px;
+    --shadow:    0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* ─── Layout ─── */
+  .layout { display: flex; min-height: 100vh; }
+
+  /* Sidebar */
+  .sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 24px 16px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 4px;
+  }
+  .sidebar-logo .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--blue);
+  }
+  .sidebar-logo span {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .02em;
+    color: var(--text);
+  }
+  .sidebar-section { display: flex; flex-direction: column; gap: 8px; }
+  .sidebar-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0 4px;
+  }
+  .sidebar input[type="date"] {
+    width: 100%;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    font-size: 13px;
+    color: var(--text);
+    background: var(--bg);
+    outline: none;
+    transition: border-color .15s;
+  }
+  .sidebar input[type="date"]:focus { border-color: var(--blue); }
+  .btn-apply {
+    width: 100%;
+    padding: 8px;
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    border-radius: var(--r);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity .15s;
+    margin-top: 4px;
+  }
+  .btn-apply:hover { opacity: .88; }
+  .btn-preset {
+    width: 100%;
+    padding: 7px 10px;
+    background: var(--light);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    font-size: 12px;
+    cursor: pointer;
+    text-align: left;
+    transition: background .1s;
+  }
+  .btn-preset:hover { background: var(--border); }
+  .sidebar-footer {
+    margin-top: auto;
+    font-size: 11px;
+    color: var(--muted);
+    padding: 0 4px;
+    line-height: 1.6;
+  }
+
+  /* Main */
+  .main { flex: 1; padding: 32px 28px; overflow-x: hidden; }
+  .page-header { margin-bottom: 24px; }
+  .page-title { font-size: 20px; font-weight: 700; color: var(--text); }
+  .page-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+  /* Loading */
+  .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 60px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid var(--border);
+    border-top-color: var(--blue);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Error */
+  .error-box {
+    background: var(--red-bg);
+    border: 1px solid #FCA5A5;
+    border-radius: var(--r);
+    padding: 16px;
+    color: #991B1B;
+    font-size: 13px;
+  }
+
+  /* ─── KPI Row ─── */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 16px 18px;
+    box-shadow: var(--shadow);
+  }
+  .kpi-label { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .kpi-value { font-size: 26px; font-weight: 700; line-height: 1; }
+  .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .kpi-blue .kpi-value  { color: var(--blue); }
+  .kpi-green .kpi-value { color: var(--green); }
+  .kpi-red .kpi-value   { color: var(--red); }
+  .kpi-yellow .kpi-value{ color: var(--yellow); }
+  .kpi-purple .kpi-value{ color: var(--purple); }
+
+  /* ─── Grid ─── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+  /* ─── Summary Card ─── */
+  .summary-card {
+    background: linear-gradient(135deg, var(--blue-bg) 0%, var(--surface) 65%);
+    border-color: #BFDBFE;
+    margin-bottom: 16px;
+  }
+  .summary-card .card-title { justify-content: space-between; margin-bottom: 12px; }
+  .summary-card .card-title-left { display: flex; align-items: center; gap: 6px; }
+  .summary-text { font-size: 13.5px; line-height: 1.9; color: var(--text); }
+  .summary-text strong { color: var(--blue); font-weight: 700; }
+  .summary-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .summary-chip {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+  .summary-chip strong { font-size: 12px; color: var(--text); font-weight: 700; }
+  .summary-chip.up strong   { color: var(--red); }
+  .summary-chip.down strong { color: var(--green); }
+  .btn-copy {
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--blue);
+    background: var(--surface);
+    border: 1px solid var(--blue);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background .1s;
+    flex-shrink: 0;
+  }
+  .btn-copy:hover { background: var(--blue-bg); }
+
+  /* ─── AI Analysis Card ─── */
+  .ai-card {
+    background: linear-gradient(135deg, var(--purple-bg) 0%, var(--surface) 65%);
+    border-color: #DDD6FE;
+    margin-bottom: 16px;
+  }
+  .ai-card .card-title { justify-content: space-between; margin-bottom: 12px; }
+  .btn-ai {
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+    background: var(--purple);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: opacity .15s;
+    flex-shrink: 0;
+  }
+  .btn-ai:hover { opacity: .88; }
+  .btn-ai:disabled { opacity: .5; cursor: not-allowed; }
+  .ai-placeholder { font-size: 12.5px; color: var(--muted); padding: 4px 0; line-height: 1.6; }
+  .ai-loading { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12.5px; padding: 6px 0; }
+  .ai-error { background: var(--red-bg); border: 1px solid #FCA5A5; border-radius: 8px; padding: 12px 14px; color: #991B1B; font-size: 12.5px; line-height: 1.6; }
+  .ai-result-list { display: flex; flex-direction: column; gap: 12px; }
+  .ai-issue { border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; background: var(--surface); }
+  .ai-issue-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .ai-issue-title { font-weight: 700; font-size: 13px; color: var(--text); }
+  .ai-issue-count { font-size: 11px; color: var(--muted); margin-left: auto; }
+  .ai-issue-desc { font-size: 12.5px; color: var(--text); line-height: 1.65; margin-bottom: 8px; }
+  .ai-issue-fix { font-size: 12.5px; color: var(--text); background: var(--light); border-radius: 6px; padding: 10px 12px; line-height: 1.65; }
+  .ai-issue-fix .fix-label { display: block; font-weight: 700; color: var(--purple); font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; margin-bottom: 3px; }
+  .ai-meta { font-size: 11px; color: var(--muted); margin-top: 12px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .ai-key-row { font-size: 11.5px; color: var(--muted); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .ai-key-missing { color: #92400E; }
+  .ai-key-form { display: flex; flex-direction: column; gap: 10px; }
+  .ai-placeholder a { color: var(--purple); text-decoration: underline; }
+  .ai-key-input-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .ai-key-input {
+    flex: 1;
+    min-width: 220px;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    font-size: 13px;
+    outline: none;
+    background: var(--bg);
+    color: var(--text);
+  }
+  .ai-key-input:focus { border-color: var(--purple); }
+
+  /* ─── Card ─── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 20px;
+    box-shadow: var(--shadow);
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+  .card-title .ct-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--blue);
+    display: inline-block;
+  }
+
+  /* ─── Bar Chart (SVG-less, CSS only) ─── */
+  .bar-list { display: flex; flex-direction: column; gap: 10px; }
+  .bar-item { display: flex; align-items: center; gap: 10px; }
+  .bar-name { width: 90px; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+  .bar-track { flex: 1; height: 6px; background: var(--light); border-radius: 99px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 99px; transition: width .4s ease; }
+  .bar-count { width: 28px; text-align: right; font-size: 12px; font-weight: 600; color: var(--text); flex-shrink: 0; }
+
+  /* ─── Donut Chart (SVG) ─── */
+  .donut-wrap { display: flex; align-items: center; gap: 20px; }
+  .donut-svg { flex-shrink: 0; }
+  .donut-legend { display: flex; flex-direction: column; gap: 8px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .legend-label { color: var(--muted); }
+  .legend-val { font-weight: 600; color: var(--text); margin-left: auto; padding-left: 12px; }
+
+  /* ─── Daily Trend (sparkline bars) ─── */
+  .trend-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    height: 80px;
+    padding-top: 8px;
+  }
+  .trend-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .trend-bar-wrap { flex: 1; width: 100%; display: flex; flex-direction: column-reverse; align-items: stretch; }
+  .trend-bar {
+    width: 100%;
+    background: var(--blue);
+    border-radius: 3px 3px 0 0;
+    min-height: 2px;
+    transition: height .3s ease;
+    opacity: .8;
+  }
+  .trend-bar:hover { opacity: 1; }
+  .trend-seg { width: 100%; transition: height .3s ease; opacity: .9; }
+  .trend-seg:hover { opacity: 1; }
+  .trend-seg:last-child { border-radius: 3px 3px 0 0; }
+  .trend-date { font-size: 10px; color: var(--muted); white-space: nowrap; }
+  .trend-count { font-size: 10px; font-weight: 600; color: var(--text); }
+
+  /* ─── Card legend (inline, right-aligned in card-title) ─── */
+  .card-legend { margin-left: auto; display: flex; gap: 10px; font-size: 11px; color: var(--muted); font-weight: 400; }
+  .card-legend .legend-swatch { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
+
+  /* ─── Insights ─── */
+  .insight-list { display: flex; flex-direction: column; gap: 11px; list-style: none; }
+  .insight-item { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; line-height: 1.6; color: var(--text); }
+  .insight-item strong { font-weight: 700; }
+  .insight-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+  .insight-info .insight-dot     { background: var(--blue); }
+  .insight-warning .insight-dot  { background: var(--yellow); }
+  .insight-danger .insight-dot   { background: var(--red); }
+  .insight-positive .insight-dot { background: var(--green); }
+
+  /* ─── Tags ─── */
+  .tag-cloud { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag-pill {
+    padding: 4px 10px;
+    background: var(--light);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    user-select: none;
+    transition: background .12s, border-color .12s, color .12s;
+  }
+  .tag-pill:hover { background: var(--blue-bg); border-color: var(--blue); color: var(--blue); }
+  .tag-pill.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+  .tag-pill .tag-n { font-weight: 600; color: var(--text); }
+  .tag-pill:hover .tag-n { color: var(--blue); }
+  .tag-pill.active .tag-n { color: #fff; }
+  .tag-filter-note { font-size: 12px; font-weight: 400; color: var(--muted); }
+  .tag-filter-note strong { color: var(--blue); font-weight: 700; }
+  .btn-clear-tag {
+    margin-left: auto;
+    padding: 3px 10px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background .1s;
+    flex-shrink: 0;
+  }
+  .btn-clear-tag:hover { background: var(--light); }
+
+  /* ─── Severity ─── */
+  .sev-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .sev-critical { background: var(--red-bg);    color: var(--red); }
+  .sev-high     { background: #FFF7ED;           color: #C2410C; }
+  .sev-medium   { background: var(--yellow-bg);  color: #92400E; }
+  .sev-low      { background: var(--green-bg);   color: var(--green); }
+
+  .sent-badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 500; }
+  .sent-positive { background: var(--green-bg); color: var(--green); }
+  .sent-negative { background: var(--red-bg);   color: var(--red); }
+  .sent-neutral  { background: var(--light);    color: var(--muted); }
+
+  /* ─── Feedback Table ─── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th {
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--bg); }
+  tbody td { padding: 10px 12px; vertical-align: top; }
+  .td-content { color: var(--text); max-width: 260px; }
+  .td-summary { color: var(--muted); font-size: 11px; max-width: 200px; }
+
+  /* ─── Empty ─── */
+  .empty { text-align: center; padding: 40px; color: var(--muted); font-size: 13px; }
+
+  .btn-sheet {
+    width: 100%;
+    padding: 8px 10px;
+    background: var(--surface);
+    color: var(--blue);
+    border: 1px solid var(--blue);
+    border-radius: var(--r);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: background .1s;
+  }
+  .btn-sheet:hover { background: var(--blue-bg); }
+  .btn-sheet svg { flex-shrink: 0; }
+  @media (max-width: 1100px) {
+    .kpi-row { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 900px) {
+    .kpi-row { grid-template-columns: 1fr 1fr; }
+    .grid-2  { grid-template-columns: 1fr; }
+    .grid-3  { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 600px) {
+    .layout { flex-direction: column; }
+    .sidebar { width: 100%; height: auto; position: static; border-right: none; border-bottom: 1px solid var(--border); }
+    .kpi-row { grid-template-columns: 1fr 1fr; }
+    .grid-3  { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- ─── Sidebar ─── -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="dot"></div>
+      <span>Feedback Dashboard</span>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">ช่วงวันที่</div>
+      <input type="date" id="dateFrom">
+      <input type="date" id="dateTo">
+      <button class="btn-apply" onclick="applyFilter()">แสดงข้อมูล</button>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">ช่วงด่วน</div>
+      <button class="btn-preset" onclick="setPreset('yesterday')">เมื่อวาน</button>
+      <button class="btn-preset" onclick="setPreset(7)">7 วันที่ผ่านมา</button>
+      <button class="btn-preset" onclick="setPreset(30)">30 วันที่ผ่านมา</button>
+      <button class="btn-preset" onclick="setPreset(999)">ทั้งหมด</button>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">ข้อมูลต้นทาง</div>
+      <a id="sheetLink" href="#" target="_blank" class="btn-sheet">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+          <polyline points="15 3 21 3 21 9"/>
+          <line x1="10" y1="14" x2="21" y2="3"/>
+        </svg>
+        เปิด Google Sheet
+      </a>
+    </div>
+
+    <div class="sidebar-footer">
+      ดึงข้อมูลจาก Google Sheets<br>
+      อัพเดตทุกครั้งที่กดแสดงข้อมูล
+    </div>
+  </aside>
+
+  <!-- ─── Main ─── -->
+  <main class="main" id="main">
+    <div class="page-header">
+      <div class="page-title">สรุปผล Feedback ผู้เล่น</div>
+      <div class="page-sub" id="rangeLabel">กำลังโหลด...</div>
+    </div>
+    <div id="content">
+      <div class="loading"><div class="spinner"></div> กำลังโหลดข้อมูล...</div>
+    </div>
+  </main>
+
+</div>
+
+<script>
+// ─── CONFIG ───
+const SHEET_ID  = "1y2vFnEttXoITODI0ObTPQKyYdf4MXpJBNFiLIXs8x-o";
+const SHEET_TAB = "Feedback";
+const SHEET_GID = "482400347";
+const CSV_URL   = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_TAB)}&gid=${SHEET_GID}`;
+const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit?gid=${SHEET_GID}`;
+
+// ฟีเจอร์ "AI วิเคราะห์ปัญหา" เรียก Anthropic API ตรงจาก browser (bring-your-own-key)
+// key ของแต่ละคนจะถูกเก็บไว้ใน localStorage ของเบราว์เซอร์ตัวเองเท่านั้น ไม่ส่งไปที่ไหนนอกจาก Anthropic โดยตรง
+const AI_KEY_STORAGE = "feedback_dashboard_anthropic_key";
+
+// ─── STATE ───
+let allData = [];         // raw rows ทั้งหมด
+let filtered = [];        // หลัง filter ตามวันที่
+let selectedTag = null;   // แท็กที่กำลังกรองอยู่ (คลิกที่ tag pill เพื่อดูเฉพาะ comment ที่มีแท็กนี้)
+
+// ─── COLORS ───
+const CAT_COLOR = {
+  bug:        "#EF4444",
+  complaint:  "#F97316",
+  suggestion: "#3B82F6",
+  praise:     "#10B981",
+  question:   "#8B5CF6",
+  other:      "#9CA3AF",
+};
+const SENT_COLOR = {
+  positive: "#10B981",
+  neutral:  "#F59E0B",
+  negative: "#EF4444",
+};
+
+// ─── DATE HELPERS ───
+function toDateStr(d) {
+  return d.toISOString().slice(0,10);
+}
+function today() { return new Date(); }
+
+function initDates() {
+  const t = today();
+  const from = new Date(t);
+  from.setDate(t.getDate() - 6);
+  document.getElementById("dateFrom").value = toDateStr(from);
+  document.getElementById("dateTo").value   = toDateStr(t);
+}
+
+function setPreset(days) {
+  const t = today();
+  const from = new Date(t);
+  if (days === "yesterday") {
+    const y = new Date(t);
+    y.setDate(t.getDate() - 1);
+    document.getElementById("dateFrom").value = toDateStr(y);
+    document.getElementById("dateTo").value   = toDateStr(y);
+    applyFilter();
+    return;
+  } else if (days === 999) {
+    document.getElementById("dateFrom").value = "2000-01-01";
+  } else {
+    from.setDate(t.getDate() - (days - 1));
+    document.getElementById("dateFrom").value = toDateStr(from);
+  }
+  document.getElementById("dateTo").value = toDateStr(t);
+  applyFilter();
+}
+
+// ─── CSV PARSER ───
+function parseCSV(text) {
+  const rows = [];
+  const lines = text.split(/\r?\n/);
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    const cells = [];
+    let cur = "", inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQ && line[i+1] === '"') { cur += '"'; i++; }
+        else inQ = !inQ;
+      } else if (ch === ',' && !inQ) {
+        cells.push(cur.trim()); cur = "";
+      } else {
+        cur += ch;
+      }
+    }
+    cells.push(cur.trim());
+    rows.push(cells);
+  }
+  return rows;
+}
+
+function rowsToObjects(rows) {
+  if (rows.length < 2) return [];
+  // normalize header: lowercase, แทนช่องว่างและวงเล็บด้วย underscore
+  const headers = rows[0].map(h =>
+    h.toLowerCase()
+     .replace(/\s+/g, '_')
+     .replace(/[^a-z0-9_]/g, '')
+     .replace(/_+/g, '_')
+     .replace(/^_|_$/g, '')
+  );
+  console.log("📋 Headers:", headers);
+  return rows.slice(1).map(row => {
+    const obj = {};
+    headers.forEach((h, i) => { if (h) obj[h] = row[i] || ""; });
+    return obj;
+  });
+}
+
+function parseTimestamp(ts) {
+  if (!ts) return null;
+  // ลอง format ต่าง ๆ
+  const attempts = [
+    ts,
+    ts.replace(" ", "T"),
+    ts + "Z",
+    ts.replace(" ", "T") + "Z",
+  ];
+  for (const s of attempts) {
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) return d;
+  }
+  return null;
+}
+
+// หา timestamp field อัตโนมัติจาก object keys
+function findTimestampField(obj) {
+  const candidates = Object.keys(obj).filter(k =>
+    k.includes("timestamp") || k.includes("time") || k.includes("date") || k === "createdat"
+  );
+  return candidates[0] || null;
+}
+
+// หา field อื่น ๆ อัตโนมัติ
+function findField(obj, ...keywords) {
+  for (const kw of keywords) {
+    const found = Object.keys(obj).find(k => k.includes(kw));
+    if (found) return found;
+  }
+  return null;
+}
+
+// ─── FETCH DATA ───
+async function fetchData() {
+  const res = await fetch(CSV_URL);
+  if (!res.ok) throw new Error(`HTTP ${res.status} — ตรวจสอบว่า Sheet เป็น Public แล้ว`);
+  const text = await res.text();
+
+  if (text.trim().startsWith("<")) {
+    throw new Error("ได้รับ HTML แทน CSV — Sheet อาจยังไม่ได้ตั้งเป็น Public หรือ tab ชื่อผิด");
+  }
+
+  const rows = parseCSV(text);
+  if (rows.length < 2) throw new Error("ไม่พบข้อมูลใน Sheet (อาจว่างเปล่า)");
+
+  const objs = rowsToObjects(rows);
+  if (objs.length === 0) throw new Error("parse ข้อมูลไม่ได้");
+
+  // detect fields อัตโนมัติจาก row แรก
+  const sample = objs[0];
+  const tsField  = findTimestampField(sample);
+  const catField = findField(sample, "category");
+  const sentField= findField(sample, "sentiment");
+  const sevField = findField(sample, "severity");
+  const sumField = findField(sample, "summary");
+  const tagField = findField(sample, "tag");
+  const conField = findField(sample, "content");
+  const usrField = findField(sample, "username", "user");
+
+  console.log("🔍 Detected fields:", { tsField, catField, sentField, sevField, sumField, tagField, conField, usrField });
+  console.log("📄 Sample row:", sample);
+
+  // store detected fields globally for rendering
+  window._fields = { tsField, catField, sentField, sevField, sumField, tagField, conField, usrField };
+
+  // แปลงเป็น normalized object
+  const result = objs.map(o => {
+    const tsRaw = tsField ? o[tsField] : "";
+    const ts = parseTimestamp(tsRaw);
+    return {
+      ...o,
+      // normalized fields ให้ code เดิมทำงานได้
+      category:  catField  ? (o[catField]  || "").toLowerCase() : "",
+      sentiment: sentField ? (o[sentField] || "").toLowerCase() : "",
+      severity:  sevField  ? (o[sevField]  || "").toLowerCase() : "",
+      summary:   sumField  ? (o[sumField]  || "") : "",
+      tags:      tagField  ? (o[tagField]  || "") : "",
+      content:   conField  ? (o[conField]  || "") : "",
+      username:  usrField  ? (o[usrField]  || "") : "",
+      _date:    ts,
+      _dateStr: ts ? toDateStr(ts) : "",
+      _tsRaw:   tsRaw,
+    };
+  });
+
+  // debug: แสดงจำนวน row ที่มี timestamp และไม่มี
+  const withDate = result.filter(r => r._date);
+  const noDate   = result.filter(r => !r._date);
+  console.log(`✅ มี timestamp: ${withDate.length}, ❌ ไม่มี: ${noDate.length}`);
+  if (noDate.length > 0) console.log("ตัวอย่างที่ไม่มี timestamp:", noDate.slice(0,3).map(r => r._tsRaw));
+
+  // ถ้าไม่มี timestamp เลย — แสดง debug แล้ว return ทั้งหมดโดยไม่ filter
+  if (withDate.length === 0) {
+    console.warn("⚠️ ไม่พบ timestamp ใน row ใดเลย — แสดงข้อมูลโดยไม่กรองวันที่");
+    window._noTimestamp = true;
+    return result;  // ไม่ filter ออก
+  }
+
+  window._noTimestamp = false;
+  return withDate;
+}
+
+// ─── FILTER ───
+function filterByRange(data, from, to) {
+  // ถ้าไม่มี timestamp ในข้อมูลเลย — return ทั้งหมด
+  if (window._noTimestamp) return data;
+  const f = from || "2000-01-01";
+  const t = to   || "9999-12-31";
+  return data.filter(d => d._dateStr >= f && d._dateStr <= t);
+}
+
+// ─── COUNT HELPERS ───
+function countBy(data, field) {
+  const m = {};
+  data.forEach(d => {
+    const v = (d[field] || "other").toLowerCase();
+    m[v] = (m[v] || 0) + 1;
+  });
+  return m;
+}
+
+function parseTags(tagStr) {
+  if (!tagStr) return [];
+  try {
+    // อาจเป็น JSON array หรือ comma-separated
+    if (tagStr.startsWith("[")) return JSON.parse(tagStr);
+    return tagStr.split(",").map(t => t.trim()).filter(Boolean);
+  } catch { return tagStr.split(",").map(t => t.trim()).filter(Boolean); }
+}
+
+function countTags(data) {
+  const m = {};
+  data.forEach(d => {
+    parseTags(d.tags).forEach(t => { m[t] = (m[t] || 0) + 1; });
+  });
+  return m;
+}
+
+function dailyCount(data) {
+  const m = {};
+  data.forEach(d => { m[d._dateStr] = (m[d._dateStr] || 0) + 1; });
+  return m;
+}
+
+// นับ feedback รายวัน แยกตามอารมณ์ (สำหรับ stacked trend chart)
+function dailyCountBySentiment(data) {
+  const m = {};
+  data.forEach(d => {
+    const key = d._dateStr;
+    if (!m[key]) m[key] = { positive: 0, neutral: 0, negative: 0, total: 0 };
+    const s = ["positive", "neutral", "negative"].includes(d.sentiment) ? d.sentiment : "neutral";
+    m[key][s]++;
+    m[key].total++;
+  });
+  return m;
+}
+
+// นับ feedback แยกตามชั่วโมงของวัน (0-23) เพื่อดูช่วงเวลาที่มีการแจ้งมากที่สุด
+function hourlyCount(data) {
+  const arr = new Array(24).fill(0);
+  data.forEach(d => { if (d._date) arr[d._date.getHours()]++; });
+  return arr;
+}
+
+// ─── SUMMARY (สรุปผลจาก rawdata ตามช่วงวันที่ที่เลือก) ───
+function pct(part, total) { return total ? Math.round(part / total * 100) : 0; }
+
+function topEntry(counts) {
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  return entries[0] || null;
+}
+
+// คำนวณช่วงวันที่ก่อนหน้า (ความยาวเท่ากับช่วงที่เลือก) เพื่อใช้เปรียบเทียบเทรนด์
+function previousRange(from, to) {
+  if (!from || !to) return null;
+  const f = new Date(from), t = new Date(to);
+  const days = Math.round((t - f) / 86400000) + 1;
+  if (!isFinite(days) || days <= 0) return null;
+  const prevTo = new Date(f);
+  prevTo.setDate(f.getDate() - 1);
+  const prevFrom = new Date(prevTo);
+  prevFrom.setDate(prevTo.getDate() - days + 1);
+  return { from: toDateStr(prevFrom), to: toDateStr(prevTo) };
+}
+
+const CAT_LABEL_TH = { bug: "บั๊ก", complaint: "คำร้องเรียน", suggestion: "ข้อเสนอแนะ", praise: "คำชม", question: "คำถาม", other: "อื่นๆ" };
+const SENT_LABEL_TH = { positive: "เชิงบวก", neutral: "เป็นกลาง", negative: "เชิงลบ" };
+
+function renderSummary(data, from, to) {
+  const total = data.length;
+
+  if (total === 0) {
+    window._summaryText = "ไม่มีข้อมูล Feedback ในช่วงวันที่ที่เลือก";
+    return `
+    <div class="card summary-card">
+      <div class="card-title">
+        <span class="card-title-left"><span class="ct-dot"></span>สรุปผลภาพรวม</span>
+      </div>
+      <div class="summary-text">ไม่มีข้อมูล Feedback ในช่วงวันที่ที่เลือก ลองขยายช่วงวันที่ หรือกดปุ่ม "ทั้งหมด" ทางซ้าย</div>
+    </div>`;
+  }
+
+  const byCat  = countBy(data, "category");
+  const bySent = countBy(data, "sentiment");
+  const bySev  = countBy(data, "severity");
+  const tags   = countTags(data);
+
+  const topCat  = topEntry(byCat);
+  const topTagsArr = Object.entries(tags).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => k);
+
+  const posPct = pct(bySent["positive"] || 0, total);
+  const negPct = pct(bySent["negative"] || 0, total);
+  const bugCount  = byCat["bug"] || 0;
+  const critCount = bySev["critical"] || 0;
+
+  // เทียบกับช่วงก่อนหน้า (ความยาวเท่ากัน)
+  let trendChip = "";
+  let trendSentence = "";
+  if (!window._noTimestamp && from && to) {
+    const prev = previousRange(from, to);
+    if (prev) {
+      const prevData = filterByRange(allData, prev.from, prev.to);
+      const prevTotal = prevData.length;
+      if (prevTotal > 0) {
+        const diff = total - prevTotal;
+        const diffPct = Math.round(Math.abs(diff) / prevTotal * 100);
+        if (diff > 0) {
+          trendChip = `<span class="summary-chip up">เทียบช่วงก่อนหน้า <strong>▲ ${diffPct}%</strong></span>`;
+          trendSentence = ` เพิ่มขึ้น ${diffPct}% เมื่อเทียบกับช่วงก่อนหน้า (${prevTotal.toLocaleString()} รายการ)`;
+        } else if (diff < 0) {
+          trendChip = `<span class="summary-chip down">เทียบช่วงก่อนหน้า <strong>▼ ${diffPct}%</strong></span>`;
+          trendSentence = ` ลดลง ${diffPct}% เมื่อเทียบกับช่วงก่อนหน้า (${prevTotal.toLocaleString()} รายการ)`;
+        } else {
+          trendChip = `<span class="summary-chip">เทียบช่วงก่อนหน้า <strong>ไม่เปลี่ยนแปลง</strong></span>`;
+          trendSentence = ` ใกล้เคียงกับช่วงก่อนหน้า (${prevTotal.toLocaleString()} รายการ)`;
+        }
+      }
+    }
+  }
+
+  const sentenceParts = [];
+  sentenceParts.push(`ในช่วงที่เลือกมี Feedback ทั้งหมด <strong>${total.toLocaleString()}</strong> รายการ${trendSentence}`);
+  if (topCat) {
+    const label = CAT_LABEL_TH[topCat[0]] || topCat[0];
+    sentenceParts.push(`หมวดหมู่ที่พบมากที่สุดคือ <strong>${label}</strong> (${topCat[1]} รายการ, ${pct(topCat[1], total)}%)`);
+  }
+  sentenceParts.push(`สัดส่วนความรู้สึกเชิงบวก <strong>${posPct}%</strong> เชิงลบ <strong>${negPct}%</strong>`);
+  if (bugCount > 0) {
+    sentenceParts.push(`มีรายงานบั๊ก <strong>${bugCount}</strong> รายการ${critCount > 0 ? ` ในจำนวนนี้เป็นระดับ critical <strong>${critCount}</strong> รายการ ควรได้รับการตรวจสอบก่อน` : ""}`);
+  }
+  if (topTagsArr.length) {
+    sentenceParts.push(`แท็กที่ถูกพูดถึงบ่อยที่สุด ได้แก่ <strong>${topTagsArr.join(", ")}</strong>`);
+  }
+
+  const html = sentenceParts.join(". ") + ".";
+  // เก็บเวอร์ชัน plain text ไว้สำหรับปุ่มคัดลอก
+  window._summaryText = html.replace(/<\/?strong>/g, "");
+
+  const chips = `
+    <span class="summary-chip">ช่วงวันที่ <strong>${from || "ทั้งหมด"} — ${to || "ทั้งหมด"}</strong></span>
+    ${trendChip}
+    <span class="summary-chip">Critical <strong>${critCount}</strong></span>
+    <span class="summary-chip">เชิงบวก <strong>${posPct}%</strong></span>
+  `;
+
+  return `
+  <div class="card summary-card">
+    <div class="card-title">
+      <span class="card-title-left"><span class="ct-dot"></span>สรุปผลภาพรวม</span>
+      <button class="btn-copy" onclick="copySummary()">คัดลอกสรุปผล</button>
+    </div>
+    <div class="summary-text">${html}</div>
+    <div class="summary-chips">${chips}</div>
+  </div>`;
+}
+
+function copySummary() {
+  if (!window._summaryText) return;
+  const btn = document.querySelector(".btn-copy");
+  navigator.clipboard.writeText(window._summaryText).then(() => {
+    if (btn) {
+      const orig = btn.textContent;
+      btn.textContent = "คัดลอกแล้ว ✓";
+      setTimeout(() => { btn.textContent = orig; }, 1500);
+    }
+  }).catch(() => {
+    if (btn) {
+      const orig = btn.textContent;
+      btn.textContent = "คัดลอกไม่สำเร็จ";
+      setTimeout(() => { btn.textContent = orig; }, 1500);
+    }
+  });
+}
+
+// ─── AI ANALYSIS (วิเคราะห์ปัญหาและข้อเสนอแนะโดย AI จาก rawdata ในช่วงที่เลือก) ───
+// ─── เก็บ/อ่าน API key ของผู้ใช้ใน localStorage ของเบราว์เซอร์ตัวเอง (bring-your-own-key) ───
+function getStoredApiKey() {
+  try { return localStorage.getItem(AI_KEY_STORAGE) || ""; } catch { return ""; }
+}
+function setStoredApiKey(key) {
+  try { localStorage.setItem(AI_KEY_STORAGE, key); } catch {}
+}
+function clearStoredApiKey() {
+  try { localStorage.removeItem(AI_KEY_STORAGE); } catch {}
+}
+
+function keyStatusHTML() {
+  const key = getStoredApiKey();
+  return key
+    ? `🔑 ตั้งค่า API key แล้ว (•••${escapeHtml(key.slice(-4))}) <button class="btn-clear-tag" onclick="promptChangeApiKey()">เปลี่ยน/ลบ</button>`
+    : `<span class="ai-key-missing">⚠️ ยังไม่ได้ตั้งค่า API key</span>`;
+}
+
+function renderAISection() {
+  return `
+  <div class="card ai-card">
+    <div class="card-title">
+      <span class="card-title-left"><span class="ct-dot" style="background:var(--purple)"></span>AI วิเคราะห์ปัญหาและข้อเสนอแนะ</span>
+      <button class="btn-ai" id="btnAiAnalyze" onclick="runAIAnalysis()">🔍 วิเคราะห์ด้วย AI</button>
+    </div>
+    <div id="aiKeyRow" class="ai-key-row">${keyStatusHTML()}</div>
+    <div id="aiResultArea">
+      <div class="ai-placeholder">กดปุ่ม "วิเคราะห์ด้วย AI" เพื่อให้ AI อ่านข้อมูล Feedback ในช่วงที่เลือก สรุปปัญหาหลักที่พบ พร้อมข้อเสนอแนะวิธีแก้ไขที่นำไปใช้ได้จริง</div>
+    </div>
+  </div>`;
+}
+
+function showApiKeyForm() {
+  const area = document.getElementById("aiResultArea");
+  if (!area) return;
+  area.innerHTML = `
+    <div class="ai-key-form">
+      <div class="ai-placeholder">
+        ฟีเจอร์นี้เรียก Anthropic API ตรงจากเบราว์เซอร์ของคุณ จึงต้องใส่ Anthropic API key ของคุณเองก่อน
+        (ขอได้ที่ <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>)
+        — คีย์จะถูกเก็บไว้ใน localStorage ของเบราว์เซอร์นี้เท่านั้น ไม่ถูกส่งไปที่ไหนนอกจาก Anthropic โดยตรง
+      </div>
+      <div class="ai-key-input-row">
+        <input type="password" id="apiKeyInput" placeholder="sk-ant-..." class="ai-key-input" onkeydown="if(event.key==='Enter') saveApiKeyAndRun()">
+        <button class="btn-ai" onclick="saveApiKeyAndRun()">บันทึกแล้ววิเคราะห์</button>
+      </div>
+    </div>`;
+  const input = document.getElementById("apiKeyInput");
+  if (input) input.focus();
+}
+
+function saveApiKeyAndRun() {
+  const input = document.getElementById("apiKeyInput");
+  const key = input ? input.value.trim() : "";
+  if (!key) { if (input) input.focus(); return; }
+  setStoredApiKey(key);
+  const row = document.getElementById("aiKeyRow");
+  if (row) row.innerHTML = keyStatusHTML();
+  runAIAnalysis();
+}
+
+function promptChangeApiKey() {
+  clearStoredApiKey();
+  const row = document.getElementById("aiKeyRow");
+  if (row) row.innerHTML = keyStatusHTML();
+  showApiKeyForm();
+}
+
+// สร้าง prompt จาก rawdata — ส่งสถิติสรุป + ตัวอย่างรายการที่สำคัญที่สุด (เรียงตามความรุนแรง/เชิงลบก่อน) เพื่อไม่ให้ prompt ยาวเกินไป
+function buildAIPrompt(data) {
+  const total  = data.length;
+  const byCat  = countBy(data, "category");
+  const bySent = countBy(data, "sentiment");
+  const bySev  = countBy(data, "severity");
+  const tags   = countTags(data);
+  const topTags = Object.entries(tags).sort((a,b) => b[1]-a[1]).slice(0,10).map(([k,v]) => `${k} (${v})`).join(", ");
+
+  const scored = data.slice().sort((a, b) => {
+    const score = x => (x.severity === "critical" ? 3 : x.severity === "high" ? 2 : x.severity === "medium" ? 1 : 0)
+      + (x.sentiment === "negative" ? 2 : 0)
+      + (x.category === "bug" || x.category === "complaint" ? 1 : 0);
+    return score(b) - score(a);
+  });
+  const sampleRows = scored.slice(0, 60);
+  const sample = sampleRows.map(d => `- [${d.category||'-'}/${d.sentiment||'-'}/${d.severity||'-'}] ${(d.summary || d.content || "").replace(/\s+/g," ").slice(0,180)}`).join("\n");
+
+  return `คุณคือนักวิเคราะห์ผลิตภัณฑ์ (Product Analyst) มีหน้าที่วิเคราะห์ feedback ของผู้ใช้จากข้อมูลดิบด้านล่าง แล้วสรุปปัญหาสำคัญที่พบพร้อมข้อเสนอแนะวิธีแก้ไขที่นำไปปฏิบัติได้จริง
+
+สถิติสรุป (จากทั้งหมด ${total} รายการในช่วงที่เลือก):
+- หมวดหมู่: ${JSON.stringify(byCat)}
+- ความรู้สึก: ${JSON.stringify(bySent)}
+- ความรุนแรง: ${JSON.stringify(bySev)}
+- แท็กที่พบบ่อย: ${topTags || "-"}
+
+ตัวอย่างรายการที่มีความสำคัญสูง (เรียงจากรุนแรง/เชิงลบมาก่อน แสดง ${sampleRows.length} จากทั้งหมด ${total} รายการ):
+${sample || "(ไม่มีข้อมูล)"}
+
+โปรดวิเคราะห์แล้วตอบกลับเป็น JSON array เท่านั้น ห้ามมีข้อความอื่นนอกเหนือจาก JSON และห้ามใส่ markdown code fence โดยแต่ละ object มีโครงสร้างดังนี้:
+[{"title": "ชื่อปัญหาสั้นๆ", "severity": "critical|high|medium|low", "description": "อธิบายปัญหาที่พบ อ้างอิงจากข้อมูล 2-3 ประโยค", "recommendation": "ข้อเสนอแนะวิธีแก้ไขที่นำไปปฏิบัติได้จริง 2-3 ประโยค", "affected_count": จำนวนรายการโดยประมาณที่เกี่ยวข้อง}]
+
+เรียงลำดับจาก severity สูงไปต่ำ ระบุไม่เกิน 6 ปัญหา เน้นปัญหาที่กระทบผู้ใช้มากที่สุดและมีข้อมูลสนับสนุนชัดเจนเท่านั้น ตอบเป็นภาษาไทย`;
+}
+
+async function runAIAnalysis() {
+  const btn  = document.getElementById("btnAiAnalyze");
+  const area = document.getElementById("aiResultArea");
+  if (!btn || !area) return;
+
+  if (filtered.length === 0) {
+    area.innerHTML = `<div class="ai-placeholder">ไม่มีข้อมูลในช่วงที่เลือกสำหรับให้ AI วิเคราะห์</div>`;
+    return;
+  }
+
+  const apiKey = getStoredApiKey();
+  if (!apiKey) {
+    showApiKeyForm();
+    return;
+  }
+
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "กำลังวิเคราะห์...";
+  area.innerHTML = `<div class="ai-loading"><div class="spinner"></div> AI กำลังอ่านข้อมูล ${filtered.length.toLocaleString()} รายการ และสรุปปัญหา...</div>`;
+
+  try {
+    const prompt = buildAIPrompt(filtered);
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 1800,
+        messages: [{ role: "user", content: prompt }]
+      })
+    });
+
+    if (!res.ok) {
+      let msg = `HTTP ${res.status}`;
+      try { const errJson = await res.json(); msg = (errJson && errJson.error && errJson.error.message) || msg; } catch {}
+      if (res.status === 401) msg = "API key ไม่ถูกต้องหรือหมดอายุ กรุณาตรวจสอบอีกครั้ง";
+      throw new Error(msg);
+    }
+
+    const json = await res.json();
+    const text = (json.content || []).map(b => b.text || "").join("");
+    const start = text.indexOf("[");
+    const end   = text.lastIndexOf("]");
+    const jsonStr = (start !== -1 && end !== -1) ? text.slice(start, end + 1) : text.replace(/```json|```/g, "").trim();
+    const issues = JSON.parse(jsonStr);
+    renderAIResult(issues);
+  } catch (e) {
+    console.error("AI analysis error:", e);
+    area.innerHTML = `
+      <div class="ai-error">
+        <strong>วิเคราะห์ไม่สำเร็จ:</strong> ${escapeHtml(e.message)}<br>
+        ตรวจสอบ API key หรือลองกดวิเคราะห์อีกครั้ง — <button class="btn-clear-tag" onclick="promptChangeApiKey()">เปลี่ยน API key</button>
+      </div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+  }
+}
+
+function renderAIResult(issues) {
+  const area = document.getElementById("aiResultArea");
+  if (!area) return;
+  if (!Array.isArray(issues) || issues.length === 0) {
+    area.innerHTML = `<div class="ai-placeholder">AI ไม่พบปัญหาเด่นชัดในข้อมูลช่วงนี้</div>`;
+    return;
+  }
+
+  const sevOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+  issues.sort((a, b) => (sevOrder[(a.severity||"").toLowerCase()] ?? 9) - (sevOrder[(b.severity||"").toLowerCase()] ?? 9));
+
+  const items = issues.map(i => {
+    const sev = (i.severity || "medium").toLowerCase();
+    return `
+    <div class="ai-issue">
+      <div class="ai-issue-header">
+        <span class="sev-badge sev-${sev}">${escapeHtml(sev)}</span>
+        <span class="ai-issue-title">${escapeHtml(i.title || "-")}</span>
+        ${i.affected_count ? `<span class="ai-issue-count">~${escapeHtml(String(i.affected_count))} รายการ</span>` : ""}
+      </div>
+      <div class="ai-issue-desc">${escapeHtml(i.description || "-")}</div>
+      <div class="ai-issue-fix">
+        <span class="fix-label">ข้อเสนอแนะ</span>
+        ${escapeHtml(i.recommendation || "-")}
+      </div>
+    </div>`;
+  }).join("");
+
+  const now = new Date().toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" });
+  area.innerHTML = `
+    <div class="ai-result-list">${items}</div>
+    <div class="ai-meta">
+      <span>วิเคราะห์เมื่อ ${now} จากข้อมูล ${filtered.length.toLocaleString()} รายการ · ผลลัพธ์จาก AI ควรตรวจสอบซ้ำก่อนนำไปใช้งานจริง</span>
+      <button class="btn-clear-tag" onclick="runAIAnalysis()">วิเคราะห์ใหม่ ↻</button>
+    </div>`;
+}
+
+// ─── RENDER HELPERS ───
+function renderKPIs(data, from, to) {
+  const total = data.length;
+  const byCat  = countBy(data, "category");
+  const bySent = countBy(data, "sentiment");
+  const bySev  = countBy(data, "severity");
+  const posRate = total ? Math.round((bySent["positive"] || 0) / total * 100) : 0;
+  const negRate = total ? Math.round((bySent["negative"] || 0) / total * 100) : 0;
+  const critCount = bySev["critical"] || 0;
+
+  // เฉลี่ยต่อวัน คำนวณจากความยาวช่วงวันที่ที่เลือก (ถ้ามี timestamp)
+  let avgPerDay = "-";
+  if (!window._noTimestamp && from && to) {
+    const days = Math.max(Math.round((new Date(to) - new Date(from)) / 86400000) + 1, 1);
+    avgPerDay = (total / days).toFixed(1);
+  }
+
+  return `
+  <div class="kpi-row">
+    <div class="kpi-card kpi-blue">
+      <div class="kpi-label">Feedback ทั้งหมด</div>
+      <div class="kpi-value">${total.toLocaleString()}</div>
+      <div class="kpi-sub">ในช่วงที่เลือก</div>
+    </div>
+    <div class="kpi-card kpi-green">
+      <div class="kpi-label">เชิงบวก</div>
+      <div class="kpi-value">${posRate}%</div>
+      <div class="kpi-sub">${bySent["positive"] || 0} รายการ</div>
+    </div>
+    <div class="kpi-card kpi-red">
+      <div class="kpi-label">เชิงลบ</div>
+      <div class="kpi-value">${negRate}%</div>
+      <div class="kpi-sub">${bySent["negative"] || 0} รายการ</div>
+    </div>
+    <div class="kpi-card kpi-red">
+      <div class="kpi-label">Critical</div>
+      <div class="kpi-value">${critCount}</div>
+      <div class="kpi-sub">ต้องเร่งตรวจสอบ</div>
+    </div>
+    <div class="kpi-card kpi-yellow">
+      <div class="kpi-label">บั๊ก / ข้อเสนอแนะ</div>
+      <div class="kpi-value">${byCat["bug"] || 0}<span style="font-size:14px;color:var(--muted);font-weight:500"> / ${byCat["suggestion"] || 0}</span></div>
+      <div class="kpi-sub">รายการ</div>
+    </div>
+    <div class="kpi-card kpi-purple">
+      <div class="kpi-label">เฉลี่ย/วัน</div>
+      <div class="kpi-value">${avgPerDay}</div>
+      <div class="kpi-sub">รายการต่อวัน</div>
+    </div>
+  </div>`;
+}
+
+function renderBarChart(counts, colors, title) {
+  const entries = Object.entries(counts).sort((a,b) => b[1]-a[1]);
+  const max = entries[0]?.[1] || 1;
+  const bars = entries.map(([k,v]) => {
+    const pct = Math.round(v/max*100);
+    const color = colors[k] || "#9CA3AF";
+    return `
+    <div class="bar-item">
+      <div class="bar-name">${k}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${color}"></div></div>
+      <div class="bar-count">${v}</div>
+    </div>`;
+  }).join("");
+  return `
+  <div class="card">
+    <div class="card-title"><span class="ct-dot"></span>${title}</div>
+    <div class="bar-list">${bars || '<div class="empty">ไม่มีข้อมูล</div>'}</div>
+  </div>`;
+}
+
+function renderDonut(counts, colors, title) {
+  const entries = Object.entries(counts).sort((a,b) => b[1]-a[1]);
+  const total = entries.reduce((s,[,v]) => s+v, 0) || 1;
+  // build SVG donut
+  const cx = 52, cy = 52, r = 40, stroke = 16;
+  const circ = 2 * Math.PI * r;
+  let offset = 0;
+  const segs = entries.map(([k,v]) => {
+    const pct = v / total;
+    const dash = pct * circ;
+    const gap  = circ - dash;
+    const seg  = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none"
+      stroke="${colors[k] || '#9CA3AF'}" stroke-width="${stroke}"
+      stroke-dasharray="${dash.toFixed(2)} ${gap.toFixed(2)}"
+      stroke-dashoffset="${(-offset * circ).toFixed(2)}"
+      transform="rotate(-90 ${cx} ${cy})"/>`;
+    offset += pct;
+    return seg;
+  }).join("");
+  const legend = entries.map(([k,v]) => `
+    <div class="legend-item">
+      <div class="legend-dot" style="background:${colors[k]||'#9CA3AF'}"></div>
+      <span class="legend-label">${k}</span>
+      <span class="legend-val">${v}</span>
+    </div>`).join("");
+  return `
+  <div class="card">
+    <div class="card-title"><span class="ct-dot"></span>${title}</div>
+    <div class="donut-wrap">
+      <svg class="donut-svg" width="104" height="104" viewBox="0 0 104 104">
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#F3F4F6" stroke-width="${stroke}"/>
+        ${segs}
+      </svg>
+      <div class="donut-legend">${legend || '<span style="color:var(--muted)">ไม่มีข้อมูล</span>'}</div>
+    </div>
+  </div>`;
+}
+
+function renderTrend(data, from, to) {
+  // สร้าง array ของวันในช่วง พร้อมแยกตามอารมณ์ (stacked chart)
+  const daily = dailyCountBySentiment(data);
+  const days = [];
+  const d = new Date(from || toDateStr(today()));
+  const end = new Date(to || toDateStr(today()));
+  // จำกัด max 60 วัน
+  const diff = Math.min(Math.round((end-d)/86400000) + 1, 60);
+  const startD = new Date(end);
+  startD.setDate(end.getDate() - diff + 1);
+
+  for (let i = 0; i < diff; i++) {
+    const dd = new Date(startD);
+    dd.setDate(startD.getDate() + i);
+    const ds = toDateStr(dd);
+    days.push({ ds, ...(daily[ds] || { positive: 0, neutral: 0, negative: 0, total: 0 }) });
+  }
+
+  const max = Math.max(...days.map(d => d.total), 1);
+  const segOrder = ["positive", "neutral", "negative"]; // column-reverse: positive ล่างสุด, negative บนสุด
+
+  const bars = days.map(day => {
+    const h = Math.round(day.total / max * 70) + 2;
+    const label = day.ds.slice(5); // MM-DD
+    let used = 0;
+    const segs = day.total === 0
+      ? `<div class="trend-seg" style="height:2px;opacity:.2;background:var(--border)"></div>`
+      : segOrder.map((s, idx) => {
+          const count = day[s] || 0;
+          if (count === 0) return "";
+          let segH = idx === segOrder.length - 1 ? h - used : Math.round(count / day.total * h);
+          segH = Math.max(segH, 1);
+          used += segH;
+          return `<div class="trend-seg" style="height:${segH}px;background:${SENT_COLOR[s]}"></div>`;
+        }).join("");
+    return `
+    <div class="trend-col" title="${day.ds} · รวม ${day.total} รายการ (บวก ${day.positive} · กลาง ${day.neutral} · ลบ ${day.negative})">
+      <div class="trend-count">${day.total || ''}</div>
+      <div class="trend-bar-wrap">${segs}</div>
+      <div class="trend-date">${label}</div>
+    </div>`;
+  }).join("");
+
+  const legend = `
+    <span class="card-legend">
+      <span><span class="legend-swatch" style="background:${SENT_COLOR.positive}"></span>เชิงบวก</span>
+      <span><span class="legend-swatch" style="background:${SENT_COLOR.neutral}"></span>เป็นกลาง</span>
+      <span><span class="legend-swatch" style="background:${SENT_COLOR.negative}"></span>เชิงลบ</span>
+    </span>`;
+
+  return `
+  <div class="card">
+    <div class="card-title"><span class="ct-dot"></span>Feedback รายวัน (แยกตามอารมณ์)${legend}</div>
+    <div class="trend-chart">${bars || '<div class="empty">ไม่มีข้อมูล</div>'}</div>
+  </div>`;
+}
+
+function renderHourly(data) {
+  if (window._noTimestamp) return "";
+  const counts = hourlyCount(data);
+  const max = Math.max(...counts, 1);
+  const bars = counts.map((c, h) => {
+    const hh = Math.round(c / max * 70) + 2;
+    const label = h % 3 === 0 ? String(h).padStart(2, "0") + ":00" : "";
+    return `
+    <div class="trend-col" title="${String(h).padStart(2,'0')}:00 น. — ${c} รายการ">
+      <div class="trend-count">${c || ''}</div>
+      <div class="trend-bar-wrap"><div class="trend-bar" style="height:${hh}px;opacity:${c?0.85:0.2};background:var(--purple)"></div></div>
+      <div class="trend-date">${label}</div>
+    </div>`;
+  }).join("");
+
+  return `
+  <div class="card">
+    <div class="card-title"><span class="ct-dot" style="background:var(--purple)"></span>ช่วงเวลาที่มีการแจ้ง Feedback มากที่สุด</div>
+    <div class="trend-chart">${bars}</div>
+  </div>`;
+}
+
+// ─── INSIGHTS (วิเคราะห์ข้อสังเกตจาก rawdata อัตโนมัติ) ───
+function renderInsights(data, from, to) {
+  const total = data.length;
+  if (total === 0) return "";
+
+  const insights = [];
+
+  // วันที่มี feedback มากที่สุดในช่วง
+  const dailyEntries = Object.entries(dailyCount(data)).sort((a, b) => b[1] - a[1]);
+  if (dailyEntries.length && dailyEntries[0][1] > 0) {
+    insights.push({ type: "info", text: `วันที่มี Feedback มากที่สุดคือ <strong>${dailyEntries[0][0]}</strong> (${dailyEntries[0][1]} รายการ)` });
+  }
+
+  // ช่วงเวลาพีค
+  if (!window._noTimestamp) {
+    const hours = hourlyCount(data);
+    const maxH = Math.max(...hours);
+    if (maxH > 0) {
+      const hIdx = hours.indexOf(maxH);
+      insights.push({ type: "info", text: `ช่วงเวลาที่มีการแจ้งมากที่สุดคือ <strong>${String(hIdx).padStart(2,'0')}:00 น.</strong> (${maxH} รายการ)` });
+    }
+  }
+
+  // หมวดหมู่ที่มีสัดส่วนเชิงลบสูงสุด (ต้องมีอย่างน้อย 3 รายการ)
+  const catGroups = {};
+  data.forEach(d => {
+    const c = d.category || "other";
+    if (!catGroups[c]) catGroups[c] = { total: 0, negative: 0 };
+    catGroups[c].total++;
+    if (d.sentiment === "negative") catGroups[c].negative++;
+  });
+  let worstCat = null, worstRatio = 0;
+  Object.entries(catGroups).forEach(([c, g]) => {
+    if (g.total >= 3) {
+      const ratio = g.negative / g.total;
+      if (ratio > worstRatio) { worstRatio = ratio; worstCat = c; }
+    }
+  });
+  if (worstCat && worstRatio >= 0.3) {
+    const label = CAT_LABEL_TH[worstCat] || worstCat;
+    insights.push({ type: "warning", text: `หมวดหมู่ <strong>${label}</strong> มีสัดส่วนความรู้สึกเชิงลบสูงสุดที่ <strong>${Math.round(worstRatio*100)}%</strong> ควรให้ความสำคัญเป็นพิเศษ` });
+  }
+
+  // Critical alert
+  const critCount = data.filter(d => d.severity === "critical").length;
+  if (critCount > 0) {
+    insights.push({ type: "danger", text: `พบรายงานระดับ <strong>Critical</strong> จำนวน <strong>${critCount}</strong> รายการ ที่ควรตรวจสอบโดยด่วน` });
+  }
+
+  // แท็กที่กำลังมาแรง เทียบกับช่วงก่อนหน้า
+  if (!window._noTimestamp && from && to) {
+    const prev = previousRange(from, to);
+    if (prev) {
+      const prevData = filterByRange(allData, prev.from, prev.to);
+      if (prevData.length > 0) {
+        const curTags = countTags(data);
+        const prevTags = countTags(prevData);
+        let risingTag = null, risingDelta = 0;
+        Object.entries(curTags).forEach(([tag, count]) => {
+          const delta = count - (prevTags[tag] || 0);
+          if (delta > risingDelta && count >= 3) { risingDelta = delta; risingTag = tag; }
+        });
+        if (risingTag) {
+          insights.push({ type: "warning", text: `แท็ก <strong>${risingTag}</strong> ถูกพูดถึงเพิ่มขึ้น <strong>${risingDelta}</strong> รายการ เทียบกับช่วงก่อนหน้า` });
+        }
+      }
+    }
+  }
+
+  // สัดส่วนความรู้สึกโดยรวม
+  const bySent = countBy(data, "sentiment");
+  const negPct = pct(bySent["negative"] || 0, total);
+  const posPct = pct(bySent["positive"] || 0, total);
+  if (negPct >= 35) {
+    insights.push({ type: "danger", text: `สัดส่วนความรู้สึกเชิงลบอยู่ที่ <strong>${negPct}%</strong> ซึ่งค่อนข้างสูง ควรทบทวนสาเหตุหลัก` });
+  } else if (posPct >= 60) {
+    insights.push({ type: "positive", text: `สัดส่วนความรู้สึกเชิงบวกอยู่ที่ <strong>${posPct}%</strong> ถือว่าอยู่ในเกณฑ์ดี` });
+  }
+
+  if (insights.length === 0) {
+    insights.push({ type: "info", text: "ไม่มีข้อสังเกตพิเศษในช่วงที่เลือก ข้อมูลอยู่ในเกณฑ์ปกติ" });
+  }
+
+  const items = insights.map(i => `
+    <li class="insight-item insight-${i.type}">
+      <span class="insight-dot"></span>
+      <span>${i.text}</span>
+    </li>`).join("");
+
+  return `
+  <div class="card">
+    <div class="card-title"><span class="ct-dot"></span>Insight ที่น่าสนใจ</div>
+    <ul class="insight-list">${items}</ul>
+  </div>`;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+}
+
+function renderTags(data) {
+  const tags = countTags(data);
+  const entries = Object.entries(tags).sort((a,b)=>b[1]-a[1]).slice(0,20);
+  const pills = entries.map(([k,v]) => {
+    const active = selectedTag === k ? " active" : "";
+    const payload = encodeURIComponent(k);
+    return `
+    <span class="tag-pill${active}" onclick="toggleTag('${payload}')" title="กดเพื่อดู comment เฉพาะแท็กนี้">
+      <span class="tag-n">${v}</span>${escapeHtml(k)}
+    </span>`;
+  }).join("");
+
+  const filterNote = selectedTag
+    ? `<span class="tag-filter-note">— กำลังกรอง: <strong>${escapeHtml(selectedTag)}</strong></span>
+       <button class="btn-clear-tag" onclick="toggleTag('')">ล้างตัวกรอง ✕</button>`
+    : "";
+
+  return `
+  <div class="card">
+    <div class="card-title"><span class="ct-dot"></span>Tag ที่พบบ่อย ${filterNote}</div>
+    <div class="tag-cloud">${pills || '<span style="color:var(--muted)">ไม่มีข้อมูล</span>'}</div>
+  </div>`;
+}
+
+// คืนข้อมูลตารางล่าสุด กรองตามแท็กที่เลือกไว้ (ถ้ามี)
+function getTableData() {
+  if (!selectedTag) return filtered;
+  return filtered.filter(d => parseTags(d.tags).includes(selectedTag));
+}
+
+// เรียกเมื่อคลิก tag pill — อัปเดตเฉพาะการ์ด Tag และตารางรายการ โดยไม่ต้องคำนวณ KPI/Chart ใหม่ทั้งหมด
+function toggleTag(encoded) {
+  const tag = encoded ? decodeURIComponent(encoded) : null;
+  selectedTag = (selectedTag === tag) ? null : tag;
+  document.getElementById("tagsSection").innerHTML = renderTags(filtered);
+  document.getElementById("tableSection").innerHTML = renderTable(getTableData());
+}
+
+function renderTable(data) {
+  const rows = data.slice().sort((a,b) => b._date - a._date).slice(0,100);
+  const trs = rows.map(d => {
+    const sev  = (d.severity  || "").toLowerCase();
+    const sent = (d.sentiment || "").toLowerCase();
+    const cat  = (d.category  || "other").toLowerCase();
+    const time = d._date ? d._date.toLocaleString("th-TH",{dateStyle:"short",timeStyle:"short"}) : "";
+    return `
+    <tr>
+      <td style="color:var(--muted);white-space:nowrap;font-size:11px">${time}</td>
+      <td><span style="font-size:11px;font-weight:500;color:${CAT_COLOR[cat]||'#9CA3AF'}">${d.category||'-'}</span></td>
+      <td><span class="sent-badge sent-${sent}">${d.sentiment||'-'}</span></td>
+      <td><span class="sev-badge sev-${sev}">${d.severity||'-'}</span></td>
+      <td class="td-summary">${d.summary||'-'}</td>
+      <td class="td-content" style="max-width:240px;font-size:12px;color:var(--muted)">${d.content ? d.content.slice(0,100)+(d.content.length>100?'…':'') : '-'}</td>
+    </tr>`;
+  }).join("");
+
+  const titleNote = selectedTag
+    ? `<span class="tag-filter-note">— เฉพาะแท็ก <strong>${escapeHtml(selectedTag)}</strong></span>
+       <button class="btn-clear-tag" onclick="toggleTag('')">ล้างตัวกรอง ✕</button>`
+    : "";
+
+  return `
+  <div class="card">
+    <div class="card-title"><span class="ct-dot"></span>รายการล่าสุด <span style="color:var(--muted);font-weight:400;font-size:12px">(แสดง ${rows.length} รายการ)</span> ${titleNote}</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>เวลา</th>
+            <th>ประเภท</th>
+            <th>อารมณ์</th>
+            <th>ความรุนแรง</th>
+            <th>สรุป</th>
+            <th>ข้อความ</th>
+          </tr>
+        </thead>
+        <tbody>${trs || '<tr><td colspan="6" class="empty">ไม่มีข้อมูล</td></tr>'}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+// ─── RENDER ALL ───
+function render(from, to) {
+  filtered = filterByRange(allData, from, to);
+  selectedTag = null; // รีเซ็ตตัวกรองแท็กทุกครั้งที่เปลี่ยนช่วงวันที่
+
+  let rangeText = "";
+  if (window._noTimestamp) {
+    rangeText = `แสดงทั้งหมด ${filtered.length} รายการ (ไม่พบ timestamp field)`;
+  } else {
+    const fromLabel = from || "ทั้งหมด";
+    const toLabel   = to   || "ทั้งหมด";
+    rangeText = `${fromLabel} — ${toLabel} · ${filtered.length} รายการ`;
+  }
+  document.getElementById("rangeLabel").textContent = rangeText;
+
+  const byCat  = countBy(filtered, "category");
+  const bySent = countBy(filtered, "sentiment");
+  const bySev  = countBy(filtered, "severity");
+
+  // debug banner — แสดงเฉพาะถ้า allData > 0 แต่ filtered = 0
+  let debugBanner = "";
+  if (allData.length > 0 && filtered.length === 0 && !window._noTimestamp) {
+    const sample = allData[0];
+    debugBanner = `
+    <div style="background:#FFF3CD;border:1px solid #FFC107;border-radius:8px;padding:14px;margin-bottom:16px;font-size:13px;">
+      <strong>⚠️ ไม่พบข้อมูลในช่วงวันที่นี้</strong><br>
+      มีข้อมูลทั้งหมด ${allData.length} รายการ แต่กรองตามวันที่แล้วไม่เหลือเลย<br>
+      ตัวอย่าง dateStr ของข้อมูล: <code>${allData.slice(0,3).map(d=>d._dateStr||'(ว่าง)').join(', ')}</code><br>
+      ลองกดปุ่ม <strong>ทั้งหมด</strong> ทางซ้ายเพื่อดูข้อมูลทั้งหมด
+    </div>`;
+  }
+
+  document.getElementById("content").innerHTML = `
+    ${debugBanner}
+    ${renderSummary(filtered, from, to)}
+    ${renderAISection()}
+    ${renderKPIs(filtered, from, to)}
+    ${renderInsights(filtered, from, to)}
+    ${renderTrend(filtered, from, to)}
+    <div class="grid-3">
+      ${renderBarChart(byCat, CAT_COLOR, "หมวดหมู่")}
+      ${renderDonut(bySent, SENT_COLOR, "อารมณ์")}
+      ${renderBarChart(bySev, {critical:"#EF4444",high:"#F97316",medium:"#F59E0B",low:"#10B981"}, "ความรุนแรง")}
+    </div>
+    ${renderHourly(filtered)}
+    <div id="tagsSection">${renderTags(filtered)}</div>
+    <div id="tableSection">${renderTable(getTableData())}</div>
+  `;
+}
+
+// ─── APPLY FILTER ───
+function applyFilter() {
+  const from = document.getElementById("dateFrom").value;
+  const to   = document.getElementById("dateTo").value;
+  render(from, to);
+}
+
+// ─── INIT ───
+async function init() {
+  initDates();
+  document.getElementById("sheetLink").href = SHEET_URL;
+  document.getElementById("content").innerHTML =
+    '<div class="loading"><div class="spinner"></div> กำลังโหลดข้อมูลจาก Google Sheets...</div>';
+
+  try {
+    allData = await fetchData();
+    console.log(`✅ โหลดสำเร็จ: ${allData.length} rows`);
+
+    // ถ้าไม่มี timestamp หรือข้อมูลทั้งหมดอยู่นอกช่วง 7 วัน → แสดงทั้งหมดอัตโนมัติ
+    const from = document.getElementById("dateFrom").value;
+    const to   = document.getElementById("dateTo").value;
+    const inRange = filterByRange(allData, from, to);
+
+    if (inRange.length === 0 && allData.length > 0) {
+      // ขยาย range ให้ครอบคลุมทั้งหมด
+      document.getElementById("dateFrom").value = "2000-01-01";
+      document.getElementById("dateTo").value = toDateStr(today());
+    }
+
+    applyFilter();
+  } catch(e) {
+    console.error(e);
+    document.getElementById("rangeLabel").textContent = "โหลดไม่สำเร็จ";
+    document.getElementById("content").innerHTML = `
+      <div class="error-box">
+        <strong>โหลดข้อมูลไม่ได้</strong><br><br>
+        ${e.message}<br><br>
+        <strong>วิธีแก้:</strong><br>
+        1. ตรวจว่า Google Sheet ตั้งเป็น <strong>"Anyone with the link"</strong> (Viewer) แล้ว<br>
+        2. ชื่อ Tab ต้องเป็น <strong>"Feedback"</strong> (ตรงตัวพิมพ์ใหญ่-เล็ก)<br>
+        3. กดปุ่ม <strong>เปิด Google Sheet</strong> ทางซ้ายเพื่อตรวจสอบ<br>
+        4. เปิด DevTools (F12) → Console ดู error ละเอียด<br>
+        5. รีเฟรชหน้านี้ใหม่
+      </div>`;
+  }
+}
+
+init();
+</script>
+</body>
+</html>
